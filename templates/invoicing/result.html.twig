@@ -1,0 +1,27 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Invoicing challange - Result{% endblock %}
+
+{% block body %}
+
+{% if errors %}
+    <h1>Errors:</h1>
+    {% for error in errors %}
+        <div>{{ error }}</div>
+    {% endfor %}
+{% endif %}
+
+<div class="example-wrapper">
+    <h1>Results:</h1>
+    {% if results|length > 0 %}
+        {% for result in results %}
+            <div>Customer: {{ result.name }} (VAT:{{ result.vat }}) - Due: {{ result.due|number_format(2,".","") }} {{ output_currency.getCode }}</div>
+        {% endfor %}
+    {% else %}
+        Sorry, no customers found.
+    {% endif %}
+</div>
+
+<a href="{{ path('homepage') }}">Restart</a>
+
+{% endblock %}
