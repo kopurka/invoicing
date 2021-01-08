@@ -28,34 +28,37 @@ class InvoicingController extends AbstractController
     {
         $form = $this->createForm(InitialDataFormType::class);
         $form->handleRequest($request);
+
         if ($form->isSubmitted() && $form->isValid()) {
+            
             ///init in memory database tables
             $this->initDatabase();
+            $filter_text = 'none';
 
             //set exchange rates
             $exchange_rates = $form->get('exchange_rates')->getData();
             if (!$this->isJSON($exchange_rates)) {
-                return $this->throwError('Not valid exchange rates provided.');              
+                return $this->throwError('Not valid exchange rates provided.',$filter_text);              
             }
             $this->setCurrencies($exchange_rates);           
 
             //set the output currency
             $output_currency = $form->get('output_currency')->getData();
             if (strlen($output_currency)!=3) {
-                return $this->throwError('Not found output currency.');   
+                return $this->throwError('Not found output currency.',$filter_text);   
             }
             $this->setOutputCurrency($output_currency);
 
             //set the documents/invoices data
             $csv_file = $form->get('csv')->getData();
             if (!$csv_file) {
-                return $this->throwError('Please upload a valid CSV file');
+                return $this->throwError('Please upload a valid CSV file',$filter_text);
             }
             $csv = Reader::createFromPath($csv_file, 'r')->setHeaderOffset(0);
             if (count($csv)>0 && $this->validCSVFormat($csv->getHeader())) {
                 $this->setData($csv);
             } else {
-                return $this->throwError('Not valid CSV format data provided or empty data set.'); 
+                return $this->throwError('Not valid CSV format data provided or empty data set.',$filter_text); 
             }
 
             $results = [];
@@ -67,14 +70,27 @@ class InvoicingController extends AbstractController
                 $customer_name = $form->get('customer_name')->getData();
                 if ($vat) {
                     //only vat
-                    $customers = [$customerRepository->findOneByVAT($vat)];
+                    $customer = $customerRepository->findOneByVAT($vat);
+                    $filter_text = 'VAT = '.$vat;
+                    if ($customer) {
+                        $customers = [$customer];
+                    } else {
+                        $customers = null;
+                    }
                 } elseif ($customer_name) {
                     //only customer name
-                    $customers = [$customerRepository->findOneByName($customer_name)];
+                    $customer = $customerRepository->findOneByName($customer_name);
+                    $filter_text = 'Customer name = '.$customer_name;
+                    if ($customer) {
+                        $customers = [$customer];
+                    } else {
+                        $customers = null;
+                    }                    
                 } else {
                     //no search criteria
                     $customers = $customerRepository->findAll();
                 } 
+                
                 //iterate all customers for due calculation
                 if ($customers) {
                     foreach($customers AS $customer) {
@@ -94,6 +110,7 @@ class InvoicingController extends AbstractController
             return $this->render('invoicing/result.html.twig', [
                 'results' => $results,
                 'output_currency' => $this->output_currency,
+                'filter_text' => $filter_text,
                 'errors' => $this->errors
             ]);
         }
@@ -221,12 +238,13 @@ class InvoicingController extends AbstractController
         return is_string($string) && is_array(json_decode($string, true)) && (json_last_error() == JSON_ERROR_NONE) ? true : false;
     }    
 
-    private function throwError(string $error): Response
+    private function throwError(string $error, string $filter_text): Response
     {
         $this->errors[] = $error;
         return $this->render('invoicing/result.html.twig', [
              'results' => [],
              'output_currency' => '',
+             'filter_text' => $filter_text,             
              'errors' => $this->errors
          ]);         
     }

@@ -3,14 +3,190 @@
 {% block title %}Invoicing challange - Enter data{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
 
-<div class="example-wrapper">
+
+<div class="jumbotron">
     <h1>Hello! Lets sum some invoice documents!</h1>
-
-    {{ form(data_form) }}
+    <p>Select CSV file with imput data and input exchange rates for currencies used (ISO 4217, case insensitive). For example EUR USD GBP etc..</p>
 </div>
+
+<div class="row">
+    <div class="col-lg-5">
+        {{ form_start(data_form) }}    
+
+        {{ form_row(data_form.csv) }}
+        <span class="help-block">Valid CSV file must contain header and 7 columns named: Customer,Vat number,Document number,Type,Parent document,Currency,Total</span>   
+        <p>
+            <button class="btn btn-info" type="button" data-toggle="collapse" data-target="#collapseFilters" aria-expanded="false" aria-controls="collapseFilters">
+                 Use additional customer filter
+            </button>                
+        </p>    
+        <div class="collapse" id="collapseFilters">
+            {{ form_row(data_form.customer_name) }}
+            {{ form_row(data_form.vat) }}
+        </div>
+
+        <div style="display:none;">
+            {{ form_widget(data_form.submit) }}
+        </div>
+
+        {{ form_end(data_form) }}
+
+        <button id="mySubmit" type="button" class="btn btn-primary btn-lg">Submit && Calculate</button>
+    </div>
+    <div class="col-lg-7">
+        <div id="inputFormRow" class="myCnt">
+            <div class="input-group row" style="margin-bottom:10px !important;">
+                <div class="col-xs-2">
+                    <div class="form-check">
+                        <label class="form-check-label">
+                            Display <input type="radio" class="form-check-input" name="co[]" id="co[]" checked>
+                        </label>                      
+                    </div>
+                </div>
+                <div class="col-xs-4">
+                    <div class="input-group">
+                        <span class="input-group-addon">Code</span>
+                        <input type="text" name="cn[]" id="cn[]" class="form-control m-input" placeholder="Currency code" autocomplete="off">                                           
+                    </div>                   
+                </div>
+                <div class="col-xs-4">
+                    <div class="input-group">
+                        <span class="input-group-addon">Rate</span>
+                        <input type="text" name="cr[]" id="cr[]" class="form-control m-input" placeholder="Currency rate" autocomplete="off">
+                    </div>
+                </div>
+                <div class="col-xs-2">
+                    <button id="removeRow" type="button" class="btn btn-danger" disabled>Remove</button>
+                </div>
+            </div>
+        </div>
+        <div id="newRow"></div>
+        <div id="inputFormRow">
+            <button id="addRow" type="button" class="btn btn-info">Add New Currency</button>
+            <span class="help-block">You must provide at least one currency with rate = 1. This is the main currency, all other currency rates are calculated against it. With radio button infront you must select which of the currencies to be used to display the results.</span>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal -->
+<div class="modal fade" id="myModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLongTitle">Modal title</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          ...
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block javascripts %}
+<script type="text/javascript">
+
+$("#addRow").click(function () {
+    var html = '';
+    html += '<div id="inputFormRow" class="myCnt">';
+    html += '<div class="input-group row" style="margin-bottom:10px !important;">';
+
+    html += '<div class="col-xs-2">';
+    html += '<div class="form-check">';
+    html += '<label class="form-check-label">';
+    html += 'Display <input type="radio" class="form-check-input" name="co[]" id="co[]" value="6">';
+    html += '</label>';
+    html += '</div></div>';
+
+    html += '<div class="col-xs-4">';
+    html += '<div class="input-group">';
+    html += '<span class="input-group-addon">Code</span>';
+    html += '<input type="text" name="cn[]" id="cn[]" class="form-control m-input" placeholder="Currency code" autocomplete="off">';
+    html += '</div></div>';
+
+    html += '<div class="col-xs-4">';
+    html += '<div class="input-group">';
+    html += '<span class="input-group-addon">Rate</span>';
+    html += '<input type="text" name="cr[]" id="cr[]" class="form-control m-input" placeholder="Currency rate" autocomplete="off">';
+    html += '</div></div>';
+
+    html += '<div class="col-xs-2">';
+    html += '<button id="removeRow" type="button" class="btn btn-danger">Remove</button>';
+    html += '</div>';
+
+    html += '</div>';
+    html += '</div>';
+
+    $('#newRow').append(html);
+});
+
+$(document).on('click', '#removeRow', function () {
+    let form_row = $(this).closest('#inputFormRow');
+    let radio_button = form_row.find("input:radio");
+    if (radio_button.is(':checked')) {
+        let modal = $('#myModalCenter');
+        modal.find('.modal-body').text('You can not remove display currency, change selection first.');
+        modal.find('.modal-title').text('Warning');
+        $('#myModalCenter').modal('show');
+    } else {
+        form_row.remove();
+    }
+});
+
+$(document).on('click', '#mySubmit', function () {
+    let display_currency = '';
+    let main_currency_persist = false;
+    let currency_arr = [];
+    $('.myCnt').each(function() {
+        let currency_code = $(this).find("input:text").filter(":first").val();
+        let currency_rate = $(this).find("input:text").eq(1).val();
+        let radio_button = $(this).find("input:radio");
+        if (currency_code.length!=3 || currency_rate<=0) {
+            let modal = $('#myModalCenter');
+            modal.find('.modal-body').text('All currencies must have valid code and rate');
+            modal.find('.modal-title').text('ERROR');
+            $('#myModalCenter').modal('show');
+            return false;
+        }
+        let currency = {code: currency_code, rate: currency_rate};
+        currency_arr.push(currency);
+        if (currency_rate==1) main_currency_persist = true;
+        if (radio_button.is(':checked')) {
+            display_currency = currency_code;
+        };
+    });
+    if (!main_currency_persist) {
+        let modal = $('#myModalCenter');
+        modal.find('.modal-body').text('You must provide main currency (Rate = 1)');
+        modal.find('.modal-title').text('ERROR');
+        $('#myModalCenter').modal('show');
+        return false;
+    }
+    if (!$("input:file").val()) {
+        let modal = $('#myModalCenter');
+        modal.find('.modal-body').text('You must attach CSV file with data');
+        modal.find('.modal-title').text('ERROR');
+        $('#myModalCenter').modal('show');
+        return false;
+    }
+    $("#initial_data_form_exchange_rates").val(JSON. stringify(currency_arr));
+    $("#initial_data_form_output_currency").val(display_currency);
+    $("form").submit();
+});
+
+$(".custom-file-input").on("change", function() {
+  var fileName = $(this).val().split("\\").pop();
+  $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+});
+
+</script>
 {% endblock %}

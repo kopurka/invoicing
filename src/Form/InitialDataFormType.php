@@ -37,12 +37,11 @@ class InitialDataFormType extends AbstractType
                     ]),
                 ]
             ])
-            ->add('exchange_rates', TextType::class, [
+            ->add('exchange_rates', HiddenType::class, [
                 'required' => true,
             ])
-            ->add('output_currency', TextType::class, [
+            ->add('output_currency', HiddenType::class, [
                 'required' => true,
-                'label' => 'Output currency',
             ])
             ->add('customer_name', TextType::class, [
                 'required' => false,
@@ -52,7 +51,9 @@ class InitialDataFormType extends AbstractType
                 'required' => false,
                 'label' => 'Customer VAT',
             ])
-            ->add('submit', SubmitType::class)
+            ->add('submit', SubmitType::class, [
+                'label' => 'Submit && Calculate'
+            ])
         ;
     }
 

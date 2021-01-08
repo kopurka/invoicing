@@ -5,23 +5,57 @@
 {% block body %}
 
 {% if errors %}
-    <h1>Errors:</h1>
     {% for error in errors %}
-        <div>{{ error }}</div>
+        <div class="alert alert-danger alert-dismissible fade in">
+            <strong>Error!</strong> {{ error }}
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+        </div>    
     {% endfor %}
+
 {% endif %}
 
-<div class="example-wrapper">
-    <h1>Results:</h1>
-    {% if results|length > 0 %}
-        {% for result in results %}
-            <div>Customer: {{ result.name }} (VAT:{{ result.vat }}) - Due: {{ result.due|number_format(2,".","") }} {{ output_currency.getCode }}</div>
-        {% endfor %}
-    {% else %}
-        Sorry, no customers found.
-    {% endif %}
+<div class="alert alert-success" role="alert">
+    <h4 class="alert-heading">Here are the results!</h4>
+    <p>Each customer due amount is calculated in base currency and presented to you in display currency.</p>
+    <hr>
+    <p class="mb-0">Problem documents are not included in calculation. (such as documents with parent missing and negative value invoices)</p>
 </div>
 
-<a href="{{ path('homepage') }}">Restart</a>
+<div class="panel panel-default">
+    <div class="panel-body">
+        Used customer filter: {{ filter_text }}
+    </div>
+</div>
+
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th scope="col">Client name</th>
+            <th scope="col">Client VAT</th>
+            <th scope="col">Client Due Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if results|length > 0 %}
+            {% for result in results %}
+                <tr>
+                    <td>{{ result.name }}</td>
+                    <td>{{ result.vat }}</td>
+                    <td>{{ result.due|number_format(2,".","") }} {{ output_currency.getCode }}</td>
+                </tr>
+            {% endfor %}
+        {% else %}
+            <tr class="table-info">
+                <td colspan=3>Sorry, no customers found.</td>
+            </tr>            
+        {% endif %}
+    </tbody>
+</table>
+
+<a class="btn btn-primary" href="{{ path('homepage') }}">Restart app</a>
+
+<div class="bd-callout bd-callout-info">
+    <p>All input information and result data are stored in <code class="highlighter-rouge">memory</code>. Restarting will cause all current data and results lost.</p>
+</div>
 
 {% endblock %}
